@@ -1,27 +1,53 @@
-package sistema_bancário;
+ package sistema_bancário;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Conta {
-    private Cliente cliente;
     private double saldo;
+    private final Lock lock;
 
-    public Conta(Cliente cliente, double saldoInicial) {
-        this.cliente = cliente;
-        this.saldo = saldoInicial;
-    }
-
-    public Cliente getCliente() {
-        return cliente;
+    public Conta(double saldo) {
+        this.saldo = saldo;
+        this.lock = new ReentrantLock();
     }
 
     public double getSaldo() {
         return saldo;
     }
 
-    public synchronized void creditar(double valor) {
-        saldo += valor;
+    public void depositar(double valor) {
+        lock.lock();
+        try {
+            saldo += valor;
+        } finally {
+            lock.unlock();
+        }
     }
 
-    public synchronized void debitar(double valor) {
-        saldo -= valor;
+    public boolean sacar(double valor) {
+        lock.lock();
+        try {
+            if (saldo >= valor) {
+                saldo -= valor;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean transferir(Conta destino, double valor) {
+        lock.lock();
+        try {
+            if (sacar(valor)) {
+                destino.depositar(valor);
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
     }
 }
