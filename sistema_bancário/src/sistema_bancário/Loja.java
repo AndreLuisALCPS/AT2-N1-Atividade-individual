@@ -1,38 +1,45 @@
 package sistema_bancário;
 
- public class Loja {
-    private Conta conta;
-    private Funcionario[] funcionarios;
-    public static Loja[] lojas;
+import java.util.ArrayList;
+import java.util.List;
 
-    public Loja(double saldoInicial, int numFuncionarios) {
-        this.conta = new Conta(new Cliente("Loja", saldoInicial), saldoInicial);
-        this.funcionarios = new Funcionario[numFuncionarios];
-        for (int i = 0; i < numFuncionarios; i++) {
-            this.funcionarios[i] = new Funcionario(this);
-            this.funcionarios[i].start();
-        }
+public class Loja {
+    private final Conta conta;
+    private final List<Funcionario> funcionarios;
+
+    public Loja(Conta conta) {
+        this.conta = conta;
+        this.funcionarios = new ArrayList<>();
     }
 
-    public void realizarCompra(Cliente cliente, double valor) {
-        Banco.transferir(cliente.getConta(), conta, valor);
+    public void adicionarFuncionario(Funcionario funcionario) {
+        funcionarios.add(funcionario);
     }
 
-    public void pagarSalario(Funcionario funcionario) {
-        Banco.transferir(conta, funcionario.getContaSalario(), 1400);
-        double investimento = 0.2 * 1400;
-        funcionario.getContaInvestimento().creditar(investimento);
-        System.out.println("Funcionário da loja " + funcionario.getLoja() + " recebeu salário de R$1400 e investiu R$" + investimento);
-    }
+    public synchronized void receberPagamento(double valor, String nomeCliente) {
+        conta.depositar(valor);
+        System.out.println("Loja recebeu pagamento de R$ " + valor + " do cliente " + nomeCliente);
 
-    public synchronized void verificarSaldoParaPagamento() {
-        double totalSalarios = funcionarios.length * 1400;
-        if (conta.getSaldo() >= totalSalarios) {
-            for (Funcionario funcionario : funcionarios) {
-                if (funcionario.getContaSalario().getSaldo() == 0) {
-                    pagarSalario(funcionario);
+        for (Funcionario funcionario : funcionarios) {
+            if (!funcionario.recebeuSalario()) {
+                if (conta.getSaldo() >= 1400) {
+                    conta.sacar(1400);
+                    funcionario.receberSalario();
                 }
             }
+
+            funcionario.start();
+        }
+
+        boolean todosPagos = true;
+        for (Funcionario funcionario : funcionarios) {
+            if (!funcionario.recebeuSalario()) {
+                todosPagos = false;
+                break;
+            }
+        }
+        if (todosPagos) {
+            System.out.println("Pagamento de salários e investimentos efetuado para todos os funcionários.");
         }
     }
 }
